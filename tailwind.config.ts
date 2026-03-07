@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["'Noto Sans'", "sans-serif"],
-        display: ["'Poppins'", "sans-serif"],
+        sans: ["'Inter'", "sans-serif"],
+        display: ["'Space Grotesk'", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

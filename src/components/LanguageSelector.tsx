@@ -7,16 +7,15 @@ const LanguageSelector = () => {
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <Globe className="h-4 w-4 text-muted-foreground" />
+      <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       {(Object.keys(languageNames) as Language[]).map((l) => (
         <button
           key={l}
           onClick={() => setLang(l)}
-          className={`px-2.5 py-1 rounded-full text-sm font-medium transition-all ${
-            lang === l
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted text-muted-foreground hover:bg-accent"
-          }`}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${lang === l
+              ? "gradient-brand text-white shadow-brand shadow-sm"
+              : "glass border border-glass text-muted-foreground hover:text-white hover:border-white/20"
+            }`}
         >
           {languageNames[l]}
         </button>
