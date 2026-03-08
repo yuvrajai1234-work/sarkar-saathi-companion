@@ -580,21 +580,17 @@ const AIAssistant = () => {
     };
 
     const askGroq = async (text: string) => {
-        const groqKey = import.meta.env.VITE_GROQ_API_KEY;
-        if (!groqKey) {
-            addBotMsg(isHi ? "डेवलपर ने अभी तक .env में Groq API Key सेट नहीं किया है।" : "The developer hasn't set the Groq API Key in the .env file yet.");
-            return;
-        }
-
         addUserMsg(text);
         setInputVal("");
         setTyping(true);
 
         try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
             const systemPrompt = `You are Sarkar Saathi AI, a helpful Indian government scheme assistant. 
 User Profile: ${JSON.stringify(profileData)}
 Matched Schemes: ${JSON.stringify(matchedSchemes.map(m => m.scheme.name))}
-Answer the user's questions in ${lang === "hi" ? "Hindi" : "English"}.
 Keep responses brief, polite, and directly address the user's profile and matched schemes. DO NOT make up schemes not in the list.`;
 
             const history = messages
@@ -605,32 +601,53 @@ Keep responses brief, polite, and directly address the user's profile and matche
                     content: m.text
                 }));
 
-            const res = await window.fetch("https://api.groq.com/openai/v1/chat/completions", {
+            const res = await window.fetch(`${supabaseUrl}/functions/v1/chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${groqKey}`
+                    "apikey": supabaseKey,
+                    "Authorization": `Bearer ${supabaseKey}`,
                 },
                 body: JSON.stringify({
-                    model: "llama3-8b-8192",
                     messages: [
                         { role: "system", content: systemPrompt },
                         ...history,
                         { role: "user", content: text }
-                    ]
+                    ],
+                    mode: "discover",
+                    language: lang,
                 })
             });
 
             if (!res.ok) throw new Error("API Error");
-            const data = await res.json();
-            const botReply = data.choices[0].message.content;
+
+            const reader = res.body?.getReader();
+            if (!reader) throw new Error("No reader");
+
+            const decoder = new TextDecoder();
+            let botReply = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split("\n");
+                for (const line of lines) {
+                    if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
+                    try {
+                        const json = JSON.parse(line.slice(6));
+                        const delta = json.choices?.[0]?.delta?.content;
+                        if (delta) botReply += delta;
+                    } catch {}
+                }
+            }
 
             setTyping(false);
-            addBotMsg(botReply);
+            if (botReply) addBotMsg(botReply);
         } catch (e) {
             console.error(e);
             setTyping(false);
-            addBotMsg(isHi ? "माफ़ करें, मैं सर्वर तक नहीं पहुँच सकता। अपना API Key जांचें।" : "Sorry, I couldn't reach the server. Please check your API key.");
+            addBotMsg(isHi ? "माफ़ करें, कोई त्रुटि हुई। कृपया पुनः प्रयास करें।" : "Sorry, something went wrong. Please try again.");
         }
     };
 
