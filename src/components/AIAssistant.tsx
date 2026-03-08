@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
-import { useElevenLabsVoice } from "@/hooks/useElevenLabsVoice";
+import { useWebSpeech } from "@/hooks/useWebSpeech";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "profile" | "matching" | "chat" | "form";
