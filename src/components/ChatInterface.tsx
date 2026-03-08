@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageSelector from "./LanguageSelector";
 import ReactMarkdown from "react-markdown";
-import { Send, Bot, User, Mic, MicOff } from "lucide-react";
+import { Send, Bot, User, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useElevenLabsVoice } from "@/hooks/useElevenLabsVoice";
 
 interface Message {
   role: "assistant" | "user";
