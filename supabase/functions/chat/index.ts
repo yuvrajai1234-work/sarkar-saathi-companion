@@ -134,12 +134,16 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     let systemContent = SYSTEM_PROMPT;
-    if (mode === "discover") {
+    if (mode === "general") {
+      systemContent += `\n\n## CURRENT MODE: GENERAL ASSISTANT
+You are in open chat mode. The user is on the AI Assistant page.
+They can ask ANY question about government schemes, eligibility, documents, application process, or about the app itself.
+Do NOT follow the discovery flow. Just answer their questions directly, clearly, and helpfully.
+If they ask about navigating the app, guide them to the correct page (e.g., /schemes for Explore Schemes, /dashboard for Dashboard, /auth for Sign In).`;
+    } else if (mode === "discover") {
       systemContent += `\n\n## CURRENT MODE: DISCOVER
 You are in scheme discovery mode. The user came from "Explore Schemes". 
-Start by warmly greeting them and asking for their name and basic details to find the best schemes for them.
-Be proactive — guide the conversation step by step.`;
-    }
+Start by warmly greeting them and asking for their name and basic details to find the best schemes for them.`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
