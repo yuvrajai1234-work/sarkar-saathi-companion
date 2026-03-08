@@ -1,13 +1,8 @@
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
 import ImpactStats from "@/components/ImpactStats";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { ArrowRight, MessageSquare, Sparkles } from "lucide-react";
 
 const Index = () => {
-  const { tr } = useLanguage();
   return (
     <div className="min-h-screen bg-background">
       <HeroSection />
