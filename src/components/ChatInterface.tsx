@@ -30,13 +30,8 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputVal, setInputVal] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
-
-  const langMap: Record<string, string> = {
-    en: "en-IN", hi: "hi-IN", ta: "ta-IN", mr: "mr-IN", te: "te-IN",
-  };
+  const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, stopSpeaking, startListening, stopListening } = useElevenLabsVoice();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
