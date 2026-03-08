@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      applications: {
+        Row: {
+          aadhaar_status: string
+          additional_info: Json | null
+          annual_income: string
+          category: string
+          created_at: string
+          email: string
+          family_size: string
+          full_name: string
+          id: string
+          land_size: string
+          mobile_number: string
+          scheme_id: string
+          scheme_name: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          aadhaar_status?: string
+          additional_info?: Json | null
+          annual_income?: string
+          category?: string
+          created_at?: string
+          email?: string
+          family_size?: string
+          full_name?: string
+          id?: string
+          land_size?: string
+          mobile_number?: string
+          scheme_id: string
+          scheme_name: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          aadhaar_status?: string
+          additional_info?: Json | null
+          annual_income?: string
+          category?: string
+          created_at?: string
+          email?: string
+          family_size?: string
+          full_name?: string
+          id?: string
+          land_size?: string
+          mobile_number?: string
+          scheme_id?: string
+          scheme_name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
