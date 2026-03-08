@@ -110,7 +110,7 @@ const ChatInterface = () => {
       console.error("Chat error:", e);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: isHi ? "माफ़ करें, कोई त्रुटि हुई। कृपया पुनः प्रयास करें।" : "Sorry, something went wrong. Please try again." },
+        { role: "assistant", content: tl({ en: "Sorry, something went wrong. Please try again.", hi: "माफ़ करें, कोई त्रुटि हुई। कृपया पुनः प्रयास करें।", ta: "மன்னிக்கவும், தவறு ஏற்பட்டது.", mr: "क्षमस्व, चूक झाली.", te: "క్షమించండి, తప్పు జరిగింది." }) },
       ]);
     } finally {
       setStreaming(false);
