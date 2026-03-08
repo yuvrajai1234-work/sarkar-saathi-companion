@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageSelector from "./LanguageSelector";
-import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, User, Mic, MicOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,16 +50,22 @@ const ChatInterface = () => {
     setStreaming(true);
 
     try {
-      const res = await supabase.functions.invoke("chat", {
-        body: { messages: newMessages, mode: "general" },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ messages: newMessages, mode: "general" }),
       });
 
-      if (res.error) throw res.error;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const reader = res.data instanceof ReadableStream
-        ? res.data.getReader()
-        : new Response(res.data).body?.getReader();
-
+      const reader = res.body?.getReader();
       if (!reader) throw new Error("No reader");
 
       const decoder = new TextDecoder();
