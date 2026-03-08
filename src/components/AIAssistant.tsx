@@ -774,8 +774,8 @@ Keep responses brief, polite, and directly address the user's profile and matche
                                 <div className="p-3 border-t border-glass shrink-0">
                                     <div className="flex gap-2 items-center">
                                         <button
-                                            onMouseDown={() => startListening((text) => { setInputVal(text); })}
-                                            onMouseUp={stopListening}
+                                            onMouseDown={() => startListening()}
+                                            onMouseUp={async () => { const text = await stopListening(); if (text) setInputVal(text); }}
                                             className={`p-2.5 rounded-xl border transition-all duration-200 ${listening ? "gradient-brand border-transparent text-white shadow-brand animate-pulse" : "glass border-glass text-muted-foreground hover:text-white"
                                                 }`}
                                             title="Hold to speak"
