@@ -41,7 +41,7 @@ const ChatInterface = () => {
   const [inputVal, setInputVal] = useState("");
   const [streaming, setStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, stopSpeaking, startListening, stopListening } = useElevenLabsVoice(lang);
+  const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, speakSequentially, stopSpeaking, startListening, stopListening } = useElevenLabsVoice(lang);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
