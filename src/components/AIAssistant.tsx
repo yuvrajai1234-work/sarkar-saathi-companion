@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
-import { useElevenLabsVoice } from "@/hooks/useElevenLabsVoice";
+import { useWebSpeech } from "@/hooks/useWebSpeech";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = "profile" | "matching" | "chat" | "form";
@@ -453,7 +453,25 @@ const AIAssistant = () => {
     const { lang } = useLanguage();
     const isHi = lang === "hi";
     const navigate = useNavigate();
-    const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, stopSpeaking, startListening, stopListening } = useElevenLabsVoice();
+    const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, stopSpeaking, startListening, stopListening } = useWebSpeech();
+    const speakQueueRef = useRef<string[]>([]);
+    const isSpeakingQueueRef = useRef(false);
+
+    const speakSequentially = useCallback(async (texts: string[]) => {
+      speakQueueRef.current = [...speakQueueRef.current, ...texts];
+      if (isSpeakingQueueRef.current) return;
+      isSpeakingQueueRef.current = true;
+      while (speakQueueRef.current.length > 0) {
+        const t = speakQueueRef.current.shift()!;
+        speak(t);
+        await new Promise<void>((resolve) => {
+          const check = setInterval(() => {
+            if (!window.speechSynthesis.speaking) { clearInterval(check); resolve(); }
+          }, 200);
+        });
+      }
+      isSpeakingQueueRef.current = false;
+    }, [speak]);
 
     const [phase, setPhase] = useState<Phase>("profile");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -467,12 +485,12 @@ const AIAssistant = () => {
 
     const uid = () => Math.random().toString(36).slice(2);
 
-    const addBotMsg = (text: string, type: Message["type"] = "text", meta?: any) => {
+    const addBotMsg = (text: string, type: Message["type"] = "text", meta?: any, shouldSpeak = true) => {
         setTyping(true);
         setTimeout(() => {
             setMessages(p => [...p, { id: uid(), from: "bot", text, type, meta }]);
             setTyping(false);
-            speak(text);
+            if (shouldSpeak && voiceEnabled) speakSequentially([text]);
         }, 900);
     };
 
@@ -484,13 +502,19 @@ const AIAssistant = () => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, typing]);
 
-    // Start profile collection
+    // Start profile collection — speak welcome then question sequentially
     useEffect(() => {
         const welcome = isHi
             ? "🙏 नमस्ते! मैं सरकार साथी AI हूँ। मैं आपको सही सरकारी योजनाएँ खोजने में मदद करूँगा।"
             : "🙏 Namaste! I'm Sarkar Saathi AI. I'll help you find the right government schemes for you.";
-        addBotMsg(welcome);
-        setTimeout(() => askProfileQuestion(0), 1800);
+        addBotMsg(welcome, "text", undefined, false);
+        setTimeout(() => {
+            const step = profileSteps[0];
+            const q = isHi ? step.questionHi : step.question;
+            addBotMsg(q, step.type === "chips" ? "chips" : "text", step.chips, false);
+            // Speak both sequentially after both appear
+            if (voiceEnabled) speakSequentially([welcome, q]);
+        }, 1800);
     }, []);
 
     const askProfileQuestion = (idx: number) => {
@@ -733,6 +757,15 @@ Keep responses brief, polite, and directly address the user's profile and matche
                                                             ))}
                                                         </div>
                                                     </div>
+                                                )}
+                                                {msg.from === "bot" && msg.text && (
+                                                    <button
+                                                        onClick={() => speaking ? stopSpeaking() : speakSequentially([msg.text])}
+                                                        className="inline-flex items-center justify-center w-6 h-6 rounded-full glass border border-glass text-muted-foreground hover:text-[hsl(28,100%,64%)] transition-all mt-1"
+                                                        title={speaking ? "Stop" : "Play aloud"}
+                                                    >
+                                                        {speaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                                                    </button>
                                                 )}
                                             </div>
                                             {msg.from === "user" && (
