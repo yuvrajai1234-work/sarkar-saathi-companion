@@ -181,20 +181,18 @@ const ChatInterface = () => {
                 </div>
                 <div>
                   <h3 className="font-['Space_Grotesk'] font-bold text-white text-lg mb-1">
-                    {isHi ? "सरकार साथी AI से पूछें" : "Ask Sarkar Saathi AI"}
+                    {tl({ en: "Ask Sarkar Saathi AI", hi: "सरकार साथी AI से पूछें", ta: "சர்கார் சாதி AI-யிடம் கேளுங்கள்", mr: "सरकार साथी AI ला विचारा", te: "సర్కార్ సాథీ AI ని అడగండి" })}
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-md">
-                    {isHi
-                      ? "सरकारी योजनाओं, पात्रता, दस्तावेज़ों, या ऐप के बारे में कुछ भी पूछें।"
-                      : "Ask anything about government schemes, eligibility, documents, or how to use this app."}
+                    {tl({ en: "Ask anything about government schemes, eligibility, documents, or how to use this app.", hi: "सरकारी योजनाओं, पात्रता, दस्तावेज़ों, या ऐप के बारे में कुछ भी पूछें।", ta: "அரசு திட்டங்கள், தகுதி, ஆவணங்கள் பற்றி கேளுங்கள்.", mr: "सरकारी योजना, पात्रता, कागदपत्रांबद्दल काहीही विचारा.", te: "ప్రభుత్వ పథకాలు, అర్హత, పత్రాల గురించి ఏదైనా అడగండి." })}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center mt-2">
                   {[
-                    isHi ? "PM-KISAN क्या है?" : "What is PM-KISAN?",
-                    isHi ? "आवास योजना की पात्रता?" : "Eligibility for PM Awas?",
-                    isHi ? "छात्रवृत्ति कैसे मिलेगी?" : "How to get scholarships?",
-                    isHi ? "डैशबोर्ड कैसे देखें?" : "How to use the dashboard?",
+                    tl({ en: "What is PM-KISAN?", hi: "PM-KISAN क्या है?", ta: "PM-KISAN என்றால் என்ன?", mr: "PM-KISAN म्हणजे काय?", te: "PM-KISAN అంటే ఏమిటి?" }),
+                    tl({ en: "Eligibility for PM Awas?", hi: "आवास योजना की पात्रता?", ta: "PM Awas தகுதி?", mr: "PM आवास पात्रता?", te: "PM Awas అర్హత?" }),
+                    tl({ en: "How to get scholarships?", hi: "छात्रवृत्ति कैसे मिलेगी?", ta: "உதவித்தொகை எப்படி?", mr: "शिष्यवृत्ती कशी मिळवायची?", te: "స్కాలర్‌షిప్ ఎలా పొందాలి?" }),
+                    tl({ en: "How to use the dashboard?", hi: "डैशबोर्ड कैसे देखें?", ta: "டாஷ்போர்டு எப்படி?", mr: "डॅशबोर्ड कसे वापरायचे?", te: "డ్యాష్‌బోర్డ్ ఎలా వాడాలి?" }),
                   ].map((q) => (
                     <button
                       key={q}
