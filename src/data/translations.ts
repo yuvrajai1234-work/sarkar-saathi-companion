@@ -16,12 +16,12 @@ export const t: Record<string, Record<Language, string>> = {
     mr: "सरकारी योजनांसाठी तुमचा AI साथी",
     te: "ప్రభుత్వ పథకాల కోసం మీ AI సహచరుడు",
   },
-  callNow: {
-    en: "Call Now",
-    hi: "अभी कॉल करें",
-    ta: "இப்போது அழைக்கவும்",
-    mr: "आत्ता कॉल करा",
-    te: "ఇప్పుడు కాల్ చేయండి",
+  messageNow: {
+    en: "Message Now",
+    hi: "अभी मैसेज करें",
+    ta: "இப்போது செய்தி அனுப்புங்கள்",
+    mr: "आत्ता मेसेज करा",
+    te: "ఇప్పుడు మెసేజ్ చేయండి",
   },
   exploreSchemes: {
     en: "Explore Schemes",
@@ -129,11 +129,11 @@ export const t: Record<string, Record<Language, string>> = {
     te: "మార్గదర్శకత్వం పొందండి",
   },
   connectDesc: {
-    en: "Call our toll-free number or use the app",
-    hi: "हमारे टोल-फ्री नंबर पर कॉल करें या ऐप का उपयोग करें",
-    ta: "எங்கள் டோல்-ஃப்ரீ எண்ணை அழைக்கவும்",
-    mr: "आमच्या टोल-फ्री नंबरवर कॉल करा",
-    te: "మా టోల్-ఫ్రీ నంబర్‌కు కాల్ చేయండి",
+    en: "Message our AI agent on WhatsApp or use the app",
+    hi: "व्हाट्सएप पर हमारे AI एजेंट को मैसेज करें या ऐप का उपयोग करें",
+    ta: "வாட்ஸ்அப்பில் எங்கள் AI முகவருக்கு செய்தி அனுப்புங்கள்",
+    mr: "व्हॉट्सॲपवर आमच्या AI एजंटला मेसेज करा",
+    te: "వాట్సాప్‌లో మా AI ఏజెంట్‌కు మెసేజ్ చేయండి",
   },
   understandDesc: {
     en: "AI understands your needs in your language",

@@ -1,11 +1,13 @@
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
 import ImpactStats from "@/components/ImpactStats";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, MessageSquare, Sparkles } from "lucide-react";
 
 const Index = () => {
+  const { tr } = useLanguage();
   return (
     <div className="min-h-screen bg-background">
       <HeroSection />
@@ -41,14 +43,16 @@ const Index = () => {
                 Millions of Indians miss out on government benefits every year. Don't be one of them.
               </p>
               <div className="flex gap-4 justify-center flex-wrap relative">
-                <Link
-                  to="/assistant"
+                <a
+                  href="https://wa.link/nk6p7f"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl gradient-brand text-white font-semibold shadow-brand hover:shadow-[0_0_60px_hsl(28_100%_54%/0.5)] hover:scale-[1.02] transition-all duration-300"
                 >
-                  <Sparkles className="h-5 w-5" />
-                  Start for Free
+                  <MessageSquare className="h-5 w-5" />
+                  {tr("messageNow")}
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                </a>
                 <Link
                   to="/schemes"
                   className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl glass border border-glass text-foreground font-semibold hover:border-white/30 hover:bg-white/5 transition-all duration-300"
