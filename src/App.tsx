@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import SchemesPage from "./pages/SchemesPage";
 import AssistantPage from "./pages/AssistantPage";
@@ -26,9 +27,9 @@ const App = () => (
             <Navbar />
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/schemes" element={<SchemesPage />} />
-              <Route path="/assistant" element={<AssistantPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/schemes" element={<ProtectedRoute><SchemesPage /></ProtectedRoute>} />
+              <Route path="/assistant" element={<ProtectedRoute><AssistantPage /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
