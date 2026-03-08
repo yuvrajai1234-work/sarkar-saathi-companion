@@ -118,7 +118,16 @@ const ChatInterface = () => {
               </div>
               <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-white">Sarkar Saathi AI</h2>
             </div>
-            <LanguageSelector />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setVoiceEnabled(!voiceEnabled); if (speaking) stopSpeaking(); }}
+                className={`p-2 rounded-xl glass border transition-all ${voiceEnabled ? "border-[hsl(28_100%_54%/0.4)] text-[hsl(28,100%,64%)]" : "border-glass text-muted-foreground"}`}
+                title={voiceEnabled ? "Disable voice" : "Enable voice"}
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
+              <LanguageSelector />
+            </div>
           </div>
         </motion.div>
 
