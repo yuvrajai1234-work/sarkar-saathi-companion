@@ -453,7 +453,7 @@ const AIAssistant = () => {
     const { lang } = useLanguage();
     const isHi = lang === "hi";
     const navigate = useNavigate();
-    const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, stopSpeaking, startListening, stopListening } = useVoice(lang);
+    const { listening, speaking, voiceEnabled, setVoiceEnabled, speak, stopSpeaking, startListening, stopListening } = useElevenLabsVoice();
 
     const [phase, setPhase] = useState<Phase>("profile");
     const [messages, setMessages] = useState<Message[]>([]);
