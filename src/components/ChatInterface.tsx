@@ -3,98 +3,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams } from "react-router-dom";
 import { schemes } from "@/data/schemes";
 import LanguageSelector from "./LanguageSelector";
-import ApplicationForm from "./ApplicationForm";
-import { Send, Bot, User, Sparkles } from "lucide-react";
+import { Send, Bot, User, Sparkles, CheckCircle, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import { toast } from "sonner";
 
 interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface ApplyData {
-  scheme_id: string;
-  scheme_name: string;
-  prefill: Record<string, string>;
-}
-
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-
-async function streamChat({
-  messages,
-  mode,
-  onDelta,
-  onDone,
-  onError,
-}: {
-  messages: Message[];
-  mode?: string;
-  onDelta: (text: string) => void;
-  onDone: () => void;
-  onError: (err: string) => void;
-}) {
-  const resp = await fetch(CHAT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify({ messages, mode }),
-  });
-
-  if (!resp.ok) {
-    const body = await resp.json().catch(() => ({}));
-    onError(body.error || `Error ${resp.status}`);
-    return;
-  }
-
-  if (!resp.body) { onError("No response body"); return; }
-
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-
-    let idx: number;
-    while ((idx = buf.indexOf("\n")) !== -1) {
-      let line = buf.slice(0, idx);
-      buf = buf.slice(idx + 1);
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (!line.startsWith("data: ")) continue;
-      const json = line.slice(6).trim();
-      if (json === "[DONE]") { onDone(); return; }
-      try {
-        const parsed = JSON.parse(json);
-        const c = parsed.choices?.[0]?.delta?.content;
-        if (c) onDelta(c);
-      } catch {
-        buf = line + "\n" + buf;
-        break;
-      }
-    }
-  }
-  onDone();
-}
-
-function extractApplyScheme(content: string): ApplyData | null {
-  const regex = /```APPLY_SCHEME\s*\n([\s\S]*?)\n```/;
-  const match = content.match(regex);
-  if (!match) return null;
-  try {
-    return JSON.parse(match[1]);
-  } catch {
-    return null;
-  }
-}
-
-function stripApplyBlock(content: string): string {
-  return content.replace(/```APPLY_SCHEME\s*\n[\s\S]*?\n```/g, "").trim();
+  from: "bot" | "user";
+  text: string;
 }
 
 const TypingIndicator = () => (
@@ -102,181 +16,156 @@ const TypingIndicator = () => (
     {[0, 1, 2].map((i) => (
       <span
         key={i}
-        className="w-2 h-2 rounded-full bg-primary"
+        className="w-2 h-2 rounded-full bg-[hsl(28,100%,64%)]"
         style={{ animation: `typing-dot 1.2s ${i * 0.2}s infinite` }}
       />
     ))}
   </div>
 );
 
-interface ChatInterfaceProps {
-  mode?: "discover" | "assistant";
-}
-
-const ChatInterface = ({ mode = "assistant" }: ChatInterfaceProps) => {
-  const { lang } = useLanguage();
+const ChatInterface = () => {
+  const { lang, tr } = useLanguage();
   const [searchParams] = useSearchParams();
   const preSelectedScheme = searchParams.get("scheme");
   const isHi = lang === "hi";
 
+  const [step, setStep] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [applyData, setApplyData] = useState<ApplyData | null>(null);
+  const [typing, setTyping] = useState(false);
+  const [showSmsPopup, setShowSmsPopup] = useState(false);
+  const [form, setForm] = useState({ income: "", land: "", aadhaar: "", bank: "" });
+  const [selectedScheme, setSelectedScheme] = useState(preSelectedScheme || "");
+  const [inputVal, setInputVal] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const initializedRef = useRef(false);
+
+  const addBotMsg = (text: string) => {
+    setTyping(true);
+    setTimeout(() => {
+      setMessages((prev) => [...prev, { from: "bot", text }]);
+      setTyping(false);
+    }, 1200);
+  };
+
+  const addUserMsg = (text: string) => {
+    setMessages((prev) => [...prev, { from: "user", text }]);
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading, applyData]);
+  }, [messages, typing]);
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    let initialMsg: string;
-
-    if (mode === "discover") {
-      initialMsg = isHi
-        ? "🙏 नमस्ते! मैं सरकार साथी AI हूँ। मैं आपके लिए सबसे अच्छी सरकारी योजनाएं ढूंढूँगा। कृपया अपना नाम बताएं।"
-        : "🙏 Namaste! I'm Sarkar Saathi AI. I'll help you find the best government schemes for you. Let's start — what's your name?";
-    } else if (preSelectedScheme) {
-      const scheme = schemes.find((s) => s.id === preSelectedScheme);
-      if (scheme) {
-        initialMsg = isHi
-          ? `🙏 नमस्ते! आप **${scheme.nameHi}** के बारे में जानना चाहते हैं। मैं आपकी पात्रता जाँच सकता हूँ। कृपया अपना नाम और वार्षिक आय बताएं।`
-          : `🙏 Namaste! You want to know about **${scheme.name}**. I can check your eligibility and help you apply. Please share your name and annual income.`;
-      } else {
-        initialMsg = isHi
-          ? "🙏 नमस्ते! मैं सरकार साथी AI हूँ। सरकारी योजनाओं के बारे में कुछ भी पूछें।"
-          : "🙏 Namaste! I'm Sarkar Saathi AI. Ask me anything about government schemes.";
-      }
-    } else {
-      initialMsg = isHi
-        ? "🙏 नमस्ते! मैं सरकार साथी AI हूँ। सरकारी योजनाओं के बारे में कुछ भी पूछें।"
-        : "🙏 Namaste! I'm Sarkar Saathi AI. Ask me anything about government schemes.";
-    }
-
-    setMessages([{ role: "assistant", content: initialMsg }]);
+    const greeting = isHi
+      ? "🙏 नमस्ते! सरकार साथी में आपका स्वागत है।"
+      : "🙏 Namaste! Welcome to Sarkar Saathi.";
+    addBotMsg(greeting);
+    setTimeout(() => {
+      setStep(1);
+      const q = isHi
+        ? "आपको किस योजना में मदद चाहिए? नीचे से चुनें।"
+        : "Which scheme do you need help with? Pick one below.";
+      addBotMsg(q);
+    }, 2000);
   }, []);
 
-  // Check for APPLY_SCHEME in messages
-  useEffect(() => {
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg?.role === "assistant" && !isLoading) {
-      const data = extractApplyScheme(lastMsg.content);
-      if (data && !applyData) {
-        setApplyData(data);
-      }
-    }
-  }, [messages, isLoading]);
-
-  const sendMessage = async (text?: string) => {
-    const msg = text || input.trim();
-    if (!msg || isLoading) return;
-
-    const userMsg: Message = { role: "user", content: msg };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput("");
-    setIsLoading(true);
-
-    let assistantSoFar = "";
-    const upsert = (chunk: string) => {
-      assistantSoFar += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant" && prev.length > newMessages.length) {
-          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
-        }
-        return [...prev.slice(0, newMessages.length), { role: "assistant", content: assistantSoFar }];
-      });
-    };
-
-    try {
-      await streamChat({
-        messages: newMessages,
-        mode: mode === "discover" ? "discover" : undefined,
-        onDelta: upsert,
-        onDone: () => setIsLoading(false),
-        onError: (err) => {
-          toast.error(err);
-          setIsLoading(false);
-        },
-      });
-    } catch {
-      toast.error("Failed to connect to AI. Please try again.");
-      setIsLoading(false);
-    }
+  const handleSchemeSelect = (id: string) => {
+    const scheme = schemes.find((s) => s.id === id);
+    if (!scheme) return;
+    setSelectedScheme(id);
+    addUserMsg(isHi ? scheme.nameHi : scheme.name);
+    setStep(2);
+    setTimeout(() => {
+      addBotMsg(
+        isHi
+          ? `${scheme.nameHi} के लिए पात्रता जाँचने के लिए कुछ जानकारी दें:`
+          : `To check eligibility for ${scheme.name}, I need a few details:`
+      );
+    }, 500);
   };
 
-  const quickQuestions = mode === "discover"
-    ? [
-        isHi ? "मैं एक किसान हूँ" : "I'm a farmer",
-        isHi ? "मुझे स्वास्थ्य बीमा चाहिए" : "I need health insurance",
-        isHi ? "मुझे बिजनेस लोन चाहिए" : "I need a business loan",
-      ]
-    : preSelectedScheme
-    ? []
-    : [
-        isHi ? "मेरे लिए कौन सी योजनाएं उपलब्ध हैं?" : "Which schemes am I eligible for?",
-        isHi ? "PM-KISAN क्या है?" : "What is PM-KISAN?",
-        isHi ? "आयुष्मान भारत के लिए कैसे अप्लाई करें?" : "How to apply for Ayushman Bharat?",
-      ];
+  const handleFormSubmit = () => {
+    const scheme = schemes.find((s) => s.id === selectedScheme);
+    if (!scheme) return;
 
-  const renderMessageContent = (content: string) => {
-    const cleaned = stripApplyBlock(content);
-    return (
-      <div className="prose prose-sm prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
-        <ReactMarkdown>{cleaned}</ReactMarkdown>
-      </div>
+    addUserMsg(
+      isHi
+        ? `आय: ₹${form.income}, भूमि: ${form.land} एकड़`
+        : `Income: ₹${form.income}, Land: ${form.land} acres`
     );
+    setStep(3);
+
+    const income = parseInt(form.income) || 0;
+    const land = parseFloat(form.land) || 0;
+    const hasAadhaar = form.aadhaar.length >= 4;
+
+    let eligible = true;
+    const reasons: string[] = [];
+
+    if (scheme.maxIncome && income > scheme.maxIncome) {
+      eligible = false;
+      reasons.push(isHi ? `आय सीमा ₹${scheme.maxIncome} से अधिक` : `Income exceeds ₹${scheme.maxIncome}`);
+    }
+    if (scheme.maxLand && land > scheme.maxLand * 2.47) {
+      eligible = false;
+      reasons.push(isHi ? `भूमि सीमा से अधिक` : `Land exceeds limit`);
+    }
+    if (scheme.requiresAadhaar && !hasAadhaar) {
+      eligible = false;
+      reasons.push(isHi ? "आधार नंबर आवश्यक है" : "Aadhaar number is required");
+    }
+
+    setTimeout(() => {
+      if (eligible) {
+        addBotMsg(
+          isHi
+            ? `✅ बधाई! आप ${scheme.nameHi} के लिए पात्र हैं!\n\n📋 आवश्यक दस्तावेज़:\n${scheme.documentsHi.map(d => `• ${d}`).join("\n")}\n\n🏢 निकटतम CSC केंद्र पर जाएँ।`
+            : `✅ Congratulations! You are eligible for ${scheme.name}!\n\n📋 Documents needed:\n${scheme.documents.map(d => `• ${d}`).join("\n")}\n\n🏢 Visit your nearest CSC center to apply.`
+        );
+        setTimeout(() => setShowSmsPopup(true), 2000);
+      } else {
+        addBotMsg(
+          isHi
+            ? `❌ माफ़ कीजिए, आप पात्र नहीं हैं।\nकारण: ${reasons.join(", ")}\n\nमैं अन्य योजनाएँ सुझा सकता हूँ।`
+            : `❌ Sorry, you may not be eligible.\nReasons: ${reasons.join(", ")}\n\nI can suggest other schemes.`
+        );
+      }
+    }, 1000);
   };
 
-  const title = mode === "discover" ? (isHi ? "योजना खोजें" : "Find Schemes") : "Sarkar Saathi";
-  const subtitle = mode === "discover" ? "AI Scheme Finder" : "AI Assistant";
+  const suggestedSchemes = preSelectedScheme
+    ? schemes.filter((s) => s.id === preSelectedScheme)
+    : schemes.slice(0, 6);
 
   return (
     <div className="min-h-screen flex items-center justify-center py-10 px-4">
       <div className="w-full max-w-2xl">
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-1.5 h-5 rounded-full gradient-brand" />
-                <span className="text-xs text-muted-foreground uppercase tracking-widest font-medium">{subtitle}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-widest font-medium">AI Assistant</span>
               </div>
-              <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-foreground">{title}</h2>
+              <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-white">Sarkar Saathi</h2>
             </div>
             <LanguageSelector />
           </div>
         </motion.div>
 
-        {/* Chat window */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="glass-card rounded-3xl border border-glass overflow-hidden flex flex-col shadow-elevated"
-          style={{ height: "72vh" }}
-        >
-          {/* Header bar */}
+          style={{ height: "72vh" }}>
           <div className="gradient-brand px-5 py-4 flex items-center gap-3 shrink-0">
             <div className="relative">
-              <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
                 <Bot className="h-5 w-5 text-white" />
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-['Space_Grotesk'] font-bold text-white text-sm">
-                {mode === "discover" ? "Scheme Finder Bot" : "Sarkar Saathi Bot"}
-              </h3>
+              <h3 className="font-['Space_Grotesk'] font-bold text-white text-sm">Sarkar Saathi Bot</h3>
               <p className="text-xs text-white/70 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                Online · AI Powered
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> Online · AI Powered
               </p>
             </div>
             <div className="flex items-center gap-1.5">
@@ -286,33 +175,19 @@ const ChatInterface = ({ mode = "assistant" }: ChatInterfaceProps) => {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             <AnimatePresence>
               {messages.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {msg.role === "assistant" && (
+                <motion.div key={i} initial={{ opacity: 0, y: 12, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                  className={`flex gap-2.5 ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
+                  {msg.from === "bot" && (
                     <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center shrink-0 mt-0.5 shadow-brand">
                       <Bot className="h-4 w-4 text-white" />
                     </div>
                   )}
-                  <div
-                    className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "gradient-brand text-white rounded-br-sm shadow-brand"
-                        : "glass border border-glass text-foreground rounded-bl-sm"
-                    }`}
-                  >
-                    {msg.role === "assistant" ? renderMessageContent(msg.content) : (
-                      <span className="whitespace-pre-line">{msg.content}</span>
-                    )}
-                  </div>
-                  {msg.role === "user" && (
+                  <div className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm whitespace-pre-line leading-relaxed ${msg.from === "user" ? "gradient-brand text-white rounded-br-sm shadow-brand" : "glass border border-glass text-foreground rounded-bl-sm"
+                    }`}>{msg.text}</div>
+                  {msg.from === "user" && (
                     <div className="w-8 h-8 rounded-full glass border border-glass flex items-center justify-center shrink-0 mt-0.5">
                       <User className="h-4 w-4 text-muted-foreground" />
                     </div>
@@ -321,76 +196,97 @@ const ChatInterface = ({ mode = "assistant" }: ChatInterfaceProps) => {
               ))}
             </AnimatePresence>
 
-            {isLoading && messages[messages.length - 1]?.role === "user" && (
+            {typing && (
               <div className="flex gap-2.5 justify-start">
                 <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center shrink-0 shadow-brand">
                   <Bot className="h-4 w-4 text-white" />
                 </div>
-                <div className="glass border border-glass rounded-2xl rounded-bl-sm">
-                  <TypingIndicator />
-                </div>
+                <div className="glass border border-glass rounded-2xl rounded-bl-sm"><TypingIndicator /></div>
               </div>
             )}
 
-            {/* Application Form */}
-            {applyData && (
-              <ApplicationForm
-                data={applyData}
-                onClose={() => setApplyData(null)}
-                onSubmitted={() => {
-                  setApplyData(null);
-                  sendMessage("I have submitted my application. What are the next steps?");
-                }}
-              />
-            )}
-
-            {/* Quick questions */}
-            {messages.length === 1 && quickQuestions.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-wrap gap-2 mt-2 pl-10"
-              >
-                {quickQuestions.map((q, i) => (
-                  <button
-                    key={i}
-                    onClick={() => sendMessage(q)}
-                    className="px-3 py-2 rounded-xl glass border border-glass text-sm font-medium text-foreground hover:border-primary/40 hover:text-foreground hover:bg-primary/10 transition-all duration-200"
-                  >
-                    {q}
+            {step === 1 && !typing && messages.length >= 2 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="flex flex-wrap gap-2 mt-2 pl-10">
+                {suggestedSchemes.map((s) => (
+                  <button key={s.id} onClick={() => handleSchemeSelect(s.id)}
+                    className="px-3 py-2 rounded-xl glass border border-glass text-sm font-medium text-foreground hover:border-[hsl(28_100%_54%/0.4)] hover:text-white hover:bg-[hsl(28_100%_54%/0.1)] transition-all duration-200">
+                    {isHi ? s.nameHi : s.name}
                   </button>
                 ))}
               </motion.div>
             )}
 
+            {step === 2 && !typing && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                className="ml-10 glass-card rounded-2xl border border-glass p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="h-4 w-4 text-[hsl(28,100%,64%)]" />
+                  <span className="text-sm font-semibold text-white">
+                    {isHi ? "पात्रता जानकारी" : "Eligibility Details"}
+                  </span>
+                </div>
+                {[
+                  { key: "income", label: isHi ? "वार्षिक आय (₹)" : "Annual Income (₹)", placeholder: "150000", type: "number" },
+                  { key: "land", label: isHi ? "भूमि (एकड़)" : "Land Size (Acres)", placeholder: "3.5", type: "number" },
+                  { key: "aadhaar", label: isHi ? "आधार (अंतिम 4 अंक)" : "Aadhaar (last 4 digits)", placeholder: "1234", type: "text" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="text-xs font-medium text-muted-foreground">{field.label}</label>
+                    <input type={field.type} value={(form as any)[field.key]}
+                      maxLength={field.key === "aadhaar" ? 4 : undefined}
+                      onChange={(e) => setForm({ ...form, [field.key]: field.key === "aadhaar" ? e.target.value.replace(/\D/g, "") : e.target.value })}
+                      placeholder={field.placeholder}
+                      className="w-full mt-1 px-3 py-2.5 rounded-xl bg-[hsl(220_20%_8%)] border border-glass text-white placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-[hsl(28_100%_54%/0.5)] transition-all" />
+                  </div>
+                ))}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">{isHi ? "बैंक खाता" : "Bank Account"}</label>
+                  <select value={form.bank} onChange={(e) => setForm({ ...form, bank: e.target.value })}
+                    className="w-full mt-1 px-3 py-2.5 rounded-xl bg-[hsl(220_20%_8%)] border border-glass text-white text-sm focus:outline-none focus:border-[hsl(28_100%_54%/0.5)] transition-all appearance-none">
+                    <option value="">{isHi ? "चुनें" : "Select"}</option>
+                    <option value="yes">{isHi ? "हाँ" : "Yes"}</option>
+                    <option value="no">{isHi ? "नहीं" : "No"}</option>
+                  </select>
+                </div>
+                <button onClick={handleFormSubmit} disabled={!form.income || !form.aadhaar}
+                  className="w-full py-3 rounded-xl gradient-brand text-white font-semibold text-sm shadow-brand disabled:opacity-40 hover:shadow-[0_0_40px_hsl(28_100%_54%/0.4)] transition-all duration-200 flex items-center justify-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  {tr("checkEligibility")}
+                </button>
+              </motion.div>
+            )}
             <div ref={bottomRef} />
           </div>
-
-          {/* Input */}
-          <div className="p-3 border-t border-glass shrink-0">
-            <form
-              onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-              className="flex items-center gap-2"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isHi ? "अपना सवाल यहाँ लिखें..." : "Type your question here..."}
-                disabled={isLoading}
-                className="flex-1 px-4 py-3 rounded-2xl bg-[hsl(220_20%_8%)] border border-glass text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary/50 transition-all disabled:opacity-50"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                className="w-11 h-11 rounded-2xl gradient-brand flex items-center justify-center shadow-brand disabled:opacity-40 hover:shadow-[0_0_30px_hsl(28_100%_54%/0.4)] transition-all"
-              >
-                <Send className="h-4 w-4 text-white" />
-              </button>
-            </form>
-          </div>
         </motion.div>
+
+        <AnimatePresence>
+          {showSmsPopup && (
+            <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              className="fixed bottom-6 right-6 w-80 glass-card rounded-3xl border border-emerald-500/30 p-5 shadow-elevated z-50">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-white text-sm">Eligible!</span>
+                    <p className="text-xs text-emerald-400">Application Reference Created</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSmsPopup(false)} className="text-muted-foreground hover:text-white transition-colors">
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {isHi
+                  ? "आपकी पात्रता रिपोर्ट तैयार है। आवेदन ID: SS-2024-78432"
+                  : "Your eligibility report is ready. Application ID: SS-2024-78432"}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
