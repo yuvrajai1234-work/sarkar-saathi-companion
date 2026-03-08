@@ -30,18 +30,11 @@ interface ProfileStep {
     chips?: { value: string; labels: Record<string, string> }[];
 }
 
+// ─── Multilingual helper ──────────────────────────────────────────────────────
+type L = Record<string, string>;
+const tl = (map: L, lang: string) => map[lang] || map["en"];
+
 // ─── Category colours ─────────────────────────────────────────────────────────
-const catColors: Record<string, string> = {
-    Agriculture: "from-lime-500 to-green-600",
-    Health: "from-red-500 to-pink-600",
-    Employment: "from-blue-500 to-cyan-600",
-    Housing: "from-amber-500 to-orange-600",
-    Welfare: "from-purple-500 to-violet-600",
-    Business: "from-cyan-500 to-teal-600",
-    "Women & Child": "from-pink-500 to-rose-600",
-    Education: "from-indigo-500 to-violet-600",
-    Financial: "from-yellow-500 to-amber-600",
-};
 
 // ─── Profile questions ────────────────────────────────────────────────────────
 const profileSteps: ProfileStep[] = [
