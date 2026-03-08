@@ -463,15 +463,18 @@ const AIAssistant = () => {
       isSpeakingQueueRef.current = true;
       while (speakQueueRef.current.length > 0) {
         const t = speakQueueRef.current.shift()!;
-        speak(t);
+        await speak(t);
+        // Wait for audio to finish playing
         await new Promise<void>((resolve) => {
           const check = setInterval(() => {
-            if (!window.speechSynthesis.speaking) { clearInterval(check); resolve(); }
+            if (!speaking) { clearInterval(check); resolve(); }
           }, 200);
+          // Safety timeout after 30s
+          setTimeout(() => { clearInterval(check); resolve(); }, 30000);
         });
       }
       isSpeakingQueueRef.current = false;
-    }, [speak]);
+    }, [speak, speaking]);
 
     const [phase, setPhase] = useState<Phase>("profile");
     const [messages, setMessages] = useState<Message[]>([]);
